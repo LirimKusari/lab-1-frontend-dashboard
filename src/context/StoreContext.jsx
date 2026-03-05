@@ -1,12 +1,12 @@
 import { createContext, useEffect, useState } from "react";
-
+import axios from "axios";
 
 export const StoreContext = createContext(null)
 
 const StoreContextProvider = (props) => {
 
     const[cartItems,setCartItems] = useState({});
-    const url ="http://localhost:5173"
+    const url ="http://localhost:4000"
     const [token,setToken] = useState("");
     const [food_list, setFoodList] = useState([])
 
@@ -33,32 +33,50 @@ const StoreContextProvider = (props) => {
         for(const item in cartItems)
         {
             if(cartItems[item]>0){
-                  let itemInfo = food_list.find((product)=>product._id === item)
-                  totalAmount += itemInfo.price*cartItems[item];
+                  let itemInfo = food_list.find((product)=>product._id === item);
+                  if (itemInfo) totalAmount += itemInfo.price * cartItems[item];
             }
         }
         return totalAmount;
     }
 
     const fetchFoodList = async () => {
-        const response = await axios.get(url+"/api/food/list");
-        setFoodList(response.data.data)
+        try {
+            const response = await axios.get(url+"/api/food/list");
+            if (response.data?.success && response.data?.data) {
+                setFoodList(response.data.data);
+            } else {
+                setFoodList([]);
+            }
+        } catch (err) {
+            console.error("Error fetching food list:", err);
+            setFoodList([]);
+        }
     }
 
     const loadCartData = async (token) => {
-        const response = await axios.post(url+"/api/cart/get",{},{Headers:{token}} )
-        setCartItems(response.data.cartData);
+        try {
+            const response = await axios.post(url+"/api/cart/get",{},{headers:{token}});
+            setCartItems(response.data?.cartData || {});
+        } catch (err) {
+            console.error("Error loading cart:", err);
+            setCartItems({});
+        }
     }
 
     useEffect(()=>{
         async function loadData() {
-            await fetchFoodList()
-             if (localStorage.getItem("token")) {
-            setToken(localStorage.getItem("token"));
-            await loadCartData(localStorage.getItem("token"));
+            try {
+                await fetchFoodList();
+                if (localStorage.getItem("token")) {
+                    setToken(localStorage.getItem("token"));
+                    await loadCartData(localStorage.getItem("token"));
+                }
+            } catch (err) {
+                console.error("Error loading store data:", err);
+            }
         }
-    }
-    loadData();
+        loadData();
     },[])
 
     const contextValue = {

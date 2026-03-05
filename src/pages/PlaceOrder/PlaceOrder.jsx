@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react'
 import './PlaceOrder.css'
+import axios from 'axios'
 import { StoreContext } from '../../context/StoreContext'
 import { useNavigate } from 'react-router-dom'
 
@@ -31,7 +32,7 @@ const PlaceOrder = () => {
     let orderItems = [];
     food_list.map((item)=>{
       if(cartItems[item._id]>0){
-        let itemInfo = item;
+        let itemInfo = { ...item };
         itemInfo["quantity"] = cartItems[item._id];
         orderItems.push(itemInfo);
       }
@@ -39,15 +40,19 @@ const PlaceOrder = () => {
     let orderData = {
       address: data,
       items: orderItems,
-      amount:getTotalCartAmount()+2,
+      amount: getTotalCartAmount()+2,
     }
-    let response = await axios.post(url+"/api/order/place",orderData,{Headers:{token}});
-    if (response.data.success) {
-      const {session_url} = response.data;
-      window.location.replace(session_url);
-    }
-    else{
-      alert("Error");
+    try {
+      let response = await axios.post(url+"/api/order/place", orderData, { headers: { token } });
+      if (response.data.success) {
+        const { session_url } = response.data;
+        window.location.replace(session_url);
+      } else {
+        alert(response.data.message || "Error placing order");
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Error placing order");
     }
   }
   
